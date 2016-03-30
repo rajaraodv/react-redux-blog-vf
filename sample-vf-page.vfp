@@ -11,9 +11,14 @@
         </apex:remoteObjectModel>
     </apex:remoteObjects>
 
-    <!-- reactjs (change the url below to point to your localhost or static resource) -->
+    <!-- reactjs -->
     <div id="body" />
+    <!--Development to point to ngrok. Also update the ngrok's url to match your localhost's url-->
     <script src="https://cca77cf6.ngrok.io/bundle.js"/>
+
+    <!-- Uncomment and use the below for production to point to final static resource "reactreduxblog"(bundle.js) -->
+    <!-- <script src="{!URLFOR($Resource.reactreduxblog)}"/> -->
+   
   </body>
 </html>
 </apex:page>

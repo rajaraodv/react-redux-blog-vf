@@ -48,9 +48,14 @@ Create a custom object "Post" with following three fields:
         </apex:remoteObjectModel>
     </apex:remoteObjects>
 
-    <!-- reactjs (change the url below to point to your localhost or static resource) -->
+    <!-- reactjs -->
     <div id="body" />
+    <!--Development to point to ngrok. Also update the ngrok's url to match your localhost's url-->
     <script src="https://cca77cf6.ngrok.io/bundle.js"/>
+
+    <!-- Uncomment and use the below for production to point to final static resource "reactreduxblog"(bundle.js) -->
+    <!-- <script src="{!URLFOR($Resource.reactreduxblog)}"/> -->
+   
   </body>
 </html>
 </apex:page>
@@ -62,7 +67,7 @@ Create a custom object "Post" with following three fields:
 1. Generate the latest React app by running: `npm run build`
 2. This file will be created in the `public` folder
 3. Upload the file to static resource
-4. Change the URL in your Visualforce to point to the `bundle.js` in Static resource
+4. Change the URL in your Visualforce to point to the `bundle.js` in Static resource.
 
 
 #Learn More
