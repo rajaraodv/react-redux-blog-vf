@@ -1,5 +1,8 @@
 # React Redux CRUD App In Visualforce
 
+#Unmanaged Package
+1. Install the unmanaged package: <a href="https://login.salesforce.com/packaging/installPackage.apexp?p0=04ti0000000YACJ" target="_blank">https://login.salesforce.com/packaging/installPackage.apexp?p0=04ti0000000YACJ</a>
+2. Go to: `/apex/reactreduxblog` to see the app.
 
 #Local Installation
 1. Install <a href="https://nodejs.org" target="_blank">Node.js</a> 
