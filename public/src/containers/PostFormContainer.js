@@ -6,14 +6,14 @@ import { reduxForm } from 'redux-form';
 function validate(values) {
   const errors = {};
 
-  if (!values.title || values.title.trim() === '') {
-    errors.title = 'Enter a Title';
+  if (!values.Name || values.Name.trim() === '') {
+    errors.Name = 'Enter a Name';
   }
-  if (!values.categories || values.categories.trim() === '') {
-    errors.categories = 'Enter categories';
+  if (!values.Categories__c || values.Categories__c.trim() === '') {
+    errors.Categories__c = 'Enter Categories';
   }
-  if(!values.content || values.content.trim() === '') {
-    errors.content = 'Enter some content';
+  if(!values.Content__c || values.Content__c.trim() === '') {
+    errors.Content__c = 'Enter some Content';
   }
 
   return errors;
@@ -28,7 +28,7 @@ const asyncValidate = (values, dispatch) => {
     .then((response) => {
         let data = response.payload.data;
         //if status is not 200 or any one of the fields exist, then there is a field error
-        if(response.payload.status != 200 || data.title || data.categories || data.description) {
+        if(response.payload.status != 200 || data.Name || data.Categories__c || data.Content__c) {
           //let other components know of error by updating the redux` state
           dispatch(validatePostFieldsFailure(response.payload));
            reject(data); //this is for redux-form itself
@@ -45,7 +45,6 @@ const asyncValidate = (values, dispatch) => {
 const validateAndCreatePost = (values, dispatch) => {
 
   return new Promise((resolve, reject) => {
-
    dispatch(createPost(values))
     .then((response) => {
         let data = response.payload.data;
@@ -86,8 +85,8 @@ function mapStateToProps(state, ownProps) {
 // reduxForm: 1st is form config, 2nd is mapStateToProps, 3rd is mapDispatchToProps
 export default reduxForm({
   form: 'PostsNewForm', 
-  fields: ['title', 'categories', 'content'], 
+  fields: ['Name', 'Categories__c', 'Content__c'], 
   asyncValidate,
-  asyncBlurFields: ['title'],
+  asyncBlurFields: ['Name'],
   validate 
 }, mapStateToProps, mapDispatchToProps)(PostsForm);

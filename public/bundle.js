@@ -71,11 +71,11 @@
 
 	var _reducers2 = _interopRequireDefault(_reducers);
 
-	var _routes = __webpack_require__(301);
+	var _routes = __webpack_require__(302);
 
 	var _routes2 = _interopRequireDefault(_routes);
 
-	var _reduxPromise = __webpack_require__(314);
+	var _reduxPromise = __webpack_require__(315);
 
 	var _reduxPromise2 = _interopRequireDefault(_reduxPromise);
 
@@ -86,7 +86,7 @@
 	_reactDom2.default.render(_react2.default.createElement(
 	  _reactRedux.Provider,
 	  { store: createStoreWithMiddleware(_reducers2.default) },
-	  _react2.default.createElement(_reactRouter.Router, { history: _reactRouter.browserHistory, routes: _routes2.default })
+	  _react2.default.createElement(_reactRouter.Router, { history: _reactRouter.hashHistory, routes: _routes2.default })
 	), document.getElementById('body'));
 
 /***/ },
@@ -26164,7 +26164,7 @@
 
 	var _reducer_posts2 = _interopRequireDefault(_reducer_posts);
 
-	var _reduxForm = __webpack_require__(257);
+	var _reduxForm = __webpack_require__(258);
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -26290,6 +26290,8 @@
 
 	var _axios2 = _interopRequireDefault(_axios);
 
+	var _index = __webpack_require__(257);
+
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	//Post list
@@ -26324,11 +26326,9 @@
 
 	var ROOT_URL = location.href.indexOf('localhost') > 0 ? 'http://localhost:3000/api' : '/api';
 	function fetchPosts() {
-	  var request = _axios2.default.get(ROOT_URL + '/posts?query=SELECT Id, Name,Categories__c FROM Post__c');
-
 	  return {
 	    type: FETCH_POSTS,
-	    payload: request
+	    payload: (0, _index.getPosts)()
 	  };
 	}
 
@@ -26347,11 +26347,9 @@
 	}
 
 	function validatePostFields(props) {
-	  var request = _axios2.default.post(ROOT_URL + '/validatePostFields', props);
-
 	  return {
 	    type: VALIDATE_POST_FIELDS,
-	    payload: request
+	    payload: (0, _index.validateFields)(props)
 	  };
 	}
 
@@ -26375,11 +26373,10 @@
 	};
 
 	function createPost(props) {
-	  var request = _axios2.default.post(ROOT_URL + '/posts', props);
 
 	  return {
 	    type: CREATE_POST,
-	    payload: request
+	    payload: (0, _index.createNewPost)(props)
 	  };
 	}
 
@@ -26410,11 +26407,9 @@
 	};
 
 	function fetchPost(id) {
-	  var request = _axios2.default.get(ROOT_URL + '/posts/' + id);
-
 	  return {
 	    type: FETCH_POST,
-	    payload: request
+	    payload: (0, _index.getPost)(id)
 	  };
 	}
 
@@ -26439,11 +26434,10 @@
 	};
 
 	function deletePost(id) {
-	  var request = _axios2.default.delete(ROOT_URL + '/posts/' + id);
 
 	  return {
 	    type: DELETE_POST,
-	    payload: request
+	    payload: (0, _index.deleteSinglePost)(id)
 	  };
 	}
 
@@ -27558,6 +27552,146 @@
 
 	'use strict';
 
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	exports.getPosts = getPosts;
+	exports.getPost = getPost;
+	exports.validateFields = validateFields;
+	exports.createNewPost = createNewPost;
+	exports.deleteSinglePost = deleteSinglePost;
+
+	var _axios = __webpack_require__(240);
+
+	var _axios2 = _interopRequireDefault(_axios);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	var inVF = location.href.indexOf('apex') > 0 ? true : false;
+	var ROOT_URL = location.href.indexOf('localhost') > 0 ? 'http://localhost:3000/api' : '/api';
+
+	function getPosts() {
+	  if (!inVF) {
+	    //local - use axios
+	    return _axios2.default.get(ROOT_URL + '/posts?query=SELECT Id, Name,Categories__c FROM Post__c');
+	  }
+
+	  // Wrap RemoteObject's function in a Pomise so we can use Redux-promise like axios lib
+	  return new Promise(function (resolve, reject) {
+
+	    var post = new SObjectModel.Post();
+
+	    // Use the Remote Object to query for 10 items records
+	    post.retrieve({ limit: 10 }, function (err, records, event) {
+	      if (err) {
+	        alert(err.message);
+	        return reject({ data: { message: err.message }, status: 400 });
+	      }
+	      //convert result object to Array to match axios+jsforce(local setup)
+	      var records = event.result.records;
+	      var posts = Object.keys(records).map(function (key) {
+	        return records[key];
+	      });
+
+	      return resolve({ data: { records: posts } }); //note: wrapping in 'data' to match axios + jsforce local setup
+	    });
+	  });
+	}
+
+	function getPost(id) {
+	  if (!inVF) {
+	    //local - use axios
+	    return _axios2.default.get(ROOT_URL + '/posts/' + id);
+	  }
+
+	  // Wrap RemoteObject's function in a Pomise so we can use Redux-promise like axios lib
+	  return new Promise(function (resolve, reject) {
+
+	    var post = new SObjectModel.Post();
+
+	    //Retreive post by id
+	    post.retrieve({ where: { Id: { eq: id } } }, function (err, records, event) {
+	      if (err) {
+	        alert(err.message);
+	        return reject({ data: { message: err.message }, status: 400 });
+	      }
+	      //convert result object to Array to match axios+jsforce(local setup)
+	      var record = event.result.records["0"] || {};
+
+	      return resolve({ data: record }); //note: wrapping in 'data' to match axios + jsforce local setup
+	    });
+	  });
+	}
+
+	function validateFields(props) {
+	  if (!inVF) {
+	    //local - use axios
+	    return _axios2.default.post(ROOT_URL + '/validatePostFields', props);
+	  }
+
+	  // Wrap RemoteObject's function in a Pomise so we can use Redux-promise like axios lib
+	  return new Promise(function (resolve, reject) {
+	    var post = new SObjectModel.Post();
+	    //Retreive post by title
+	    post.retrieve({ where: { Name: { eq: props.Name } } }, function (err, records, event) {
+	      if (err) {
+	        alert(err.message);
+	        return reject({ data: { message: err.message }, status: 400 });
+	      }
+	      //convert result object to Array to match axios+jsforce(local setup)
+	      var record = event.result.records["0"] ? { 'Name': 'Name already exists', status: 400 } : {};
+
+	      return resolve({ data: record, status: 200 }); //note: wrapping in 'data' to match axios + jsforce local setup
+	    });
+	  });
+	}
+
+	function createNewPost(props) {
+	  if (!inVF) {
+	    //use axios
+	    return _axios2.default.post(ROOT_URL + '/posts', props);
+	  }
+
+	  // Wrap RemoteObject's function in a Pomise so we can use Redux-promise like axios lib
+	  return new Promise(function (resolve, reject) {
+	    var post = new SObjectModel.Post();
+	    //Retreive post by id
+	    post.create(props, function (err, records, event) {
+	      if (err) {
+	        alert(err.message);
+	        return reject({ data: { message: err.message }, status: 400 });
+	      }
+	      return resolve({ data: event.result, status: 200 });
+	    });
+	  });
+	}
+
+	function deleteSinglePost(id) {
+	  if (!inVF) {
+	    //local - use axios
+	    return _axios2.default.delete(ROOT_URL + '/posts/' + id);
+	  }
+
+	  // Wrap RemoteObject's function in a Pomise so we can use Redux-promise like axios lib
+	  return new Promise(function (resolve, reject) {
+	    var post = new SObjectModel.Post();
+	    //Retreive post by id
+	    post.del([id], function (err, records, event) {
+	      if (err) {
+	        alert(err.message);
+	        return reject({ data: { message: err.message }, status: 400 });
+	      }
+	      return resolve({ data: event.result, status: 200 }); //note: wrapping in 'data' to match axios + jsforce local setup
+	    });
+	  });
+	}
+
+/***/ },
+/* 258 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
 	exports.__esModule = true;
 	exports.untouchWithKey = exports.untouch = exports.touchWithKey = exports.touch = exports.swapArrayValues = exports.stopSubmit = exports.stopAsyncValidation = exports.startSubmit = exports.startAsyncValidation = exports.reset = exports.propTypes = exports.initializeWithKey = exports.initialize = exports.getValues = exports.removeArrayValue = exports.reduxForm = exports.reducer = exports.focus = exports.destroy = exports.changeWithKey = exports.change = exports.blur = exports.addArrayValue = exports.actionTypes = undefined;
 
@@ -27567,7 +27701,7 @@
 
 	var _reactRedux = __webpack_require__(160);
 
-	var _createAll2 = __webpack_require__(258);
+	var _createAll2 = __webpack_require__(259);
 
 	var _createAll3 = _interopRequireDefault(_createAll2);
 
@@ -27627,7 +27761,7 @@
 	exports.untouchWithKey = untouchWithKey;
 
 /***/ },
-/* 258 */
+/* 259 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -27638,35 +27772,35 @@
 
 	exports.default = createAll;
 
-	var _reducer = __webpack_require__(259);
+	var _reducer = __webpack_require__(260);
 
 	var _reducer2 = _interopRequireDefault(_reducer);
 
-	var _createReduxForm = __webpack_require__(270);
+	var _createReduxForm = __webpack_require__(271);
 
 	var _createReduxForm2 = _interopRequireDefault(_createReduxForm);
 
-	var _mapValues = __webpack_require__(261);
+	var _mapValues = __webpack_require__(262);
 
 	var _mapValues2 = _interopRequireDefault(_mapValues);
 
-	var _bindActionData = __webpack_require__(277);
+	var _bindActionData = __webpack_require__(278);
 
 	var _bindActionData2 = _interopRequireDefault(_bindActionData);
 
-	var _actions = __webpack_require__(276);
+	var _actions = __webpack_require__(277);
 
 	var actions = _interopRequireWildcard(_actions);
 
-	var _actionTypes = __webpack_require__(260);
+	var _actionTypes = __webpack_require__(261);
 
 	var actionTypes = _interopRequireWildcard(_actionTypes);
 
-	var _createPropTypes = __webpack_require__(300);
+	var _createPropTypes = __webpack_require__(301);
 
 	var _createPropTypes2 = _interopRequireDefault(_createPropTypes);
 
-	var _getValuesFromState = __webpack_require__(264);
+	var _getValuesFromState = __webpack_require__(265);
 
 	var _getValuesFromState2 = _interopRequireDefault(_getValuesFromState);
 
@@ -27772,7 +27906,7 @@
 	}
 
 /***/ },
-/* 259 */
+/* 260 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -27784,39 +27918,39 @@
 
 	var _initialState, _behaviors;
 
-	var _actionTypes = __webpack_require__(260);
+	var _actionTypes = __webpack_require__(261);
 
-	var _mapValues = __webpack_require__(261);
+	var _mapValues = __webpack_require__(262);
 
 	var _mapValues2 = _interopRequireDefault(_mapValues);
 
-	var _read = __webpack_require__(262);
+	var _read = __webpack_require__(263);
 
 	var _read2 = _interopRequireDefault(_read);
 
-	var _write = __webpack_require__(263);
+	var _write = __webpack_require__(264);
 
 	var _write2 = _interopRequireDefault(_write);
 
-	var _getValuesFromState = __webpack_require__(264);
+	var _getValuesFromState = __webpack_require__(265);
 
 	var _getValuesFromState2 = _interopRequireDefault(_getValuesFromState);
 
-	var _initializeState = __webpack_require__(266);
+	var _initializeState = __webpack_require__(267);
 
 	var _initializeState2 = _interopRequireDefault(_initializeState);
 
-	var _resetState = __webpack_require__(267);
+	var _resetState = __webpack_require__(268);
 
 	var _resetState2 = _interopRequireDefault(_resetState);
 
-	var _setErrors = __webpack_require__(268);
+	var _setErrors = __webpack_require__(269);
 
 	var _setErrors2 = _interopRequireDefault(_setErrors);
 
-	var _fieldValue = __webpack_require__(265);
+	var _fieldValue = __webpack_require__(266);
 
-	var _normalizeFields = __webpack_require__(269);
+	var _normalizeFields = __webpack_require__(270);
 
 	var _normalizeFields2 = _interopRequireDefault(_normalizeFields);
 
@@ -28093,7 +28227,7 @@
 	exports.default = decorate(formReducer);
 
 /***/ },
-/* 260 */
+/* 261 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -28117,7 +28251,7 @@
 	var UNTOUCH = exports.UNTOUCH = 'redux-form/UNTOUCH';
 
 /***/ },
-/* 261 */
+/* 262 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -28139,7 +28273,7 @@
 	}
 
 /***/ },
-/* 262 */
+/* 263 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -28185,7 +28319,7 @@
 	exports.default = read;
 
 /***/ },
-/* 263 */
+/* 264 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -28291,14 +28425,14 @@
 	exports.default = write;
 
 /***/ },
-/* 264 */
+/* 265 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	exports.__esModule = true;
 
-	var _fieldValue = __webpack_require__(265);
+	var _fieldValue = __webpack_require__(266);
 
 	/**
 	 * A different version of getValues() that does not need the fields array
@@ -28337,7 +28471,7 @@
 	exports.default = getValuesFromState;
 
 /***/ },
-/* 265 */
+/* 266 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -28362,7 +28496,7 @@
 	}
 
 /***/ },
-/* 266 */
+/* 267 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -28371,7 +28505,7 @@
 
 	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-	var _fieldValue = __webpack_require__(265);
+	var _fieldValue = __webpack_require__(266);
 
 	var makeEntry = function makeEntry(value) {
 	  return (0, _fieldValue.makeFieldValue)(value === undefined ? {} : { initial: value, value: value });
@@ -28439,14 +28573,14 @@
 	exports.default = initializeState;
 
 /***/ },
-/* 267 */
+/* 268 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	exports.__esModule = true;
 
-	var _fieldValue = __webpack_require__(265);
+	var _fieldValue = __webpack_require__(266);
 
 	var reset = function reset(value) {
 	  return (0, _fieldValue.makeFieldValue)(value === undefined || value && value.initial === undefined ? {} : { initial: value.initial, value: value.initial });
@@ -28478,7 +28612,7 @@
 	exports.default = resetState;
 
 /***/ },
-/* 268 */
+/* 269 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -28487,7 +28621,7 @@
 
 	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-	var _fieldValue = __webpack_require__(265);
+	var _fieldValue = __webpack_require__(266);
 
 	var isMetaKey = function isMetaKey(key) {
 	  return key[0] === '_';
@@ -28569,7 +28703,7 @@
 	exports.default = setErrors;
 
 /***/ },
-/* 269 */
+/* 270 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -28580,7 +28714,7 @@
 
 	exports.default = normalizeFields;
 
-	var _fieldValue = __webpack_require__(265);
+	var _fieldValue = __webpack_require__(266);
 
 	function extractKey(field) {
 	  var dotIndex = field.indexOf('.');
@@ -28666,7 +28800,7 @@
 	}
 
 /***/ },
-/* 270 */
+/* 271 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -28675,7 +28809,7 @@
 
 	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-	var _createReduxFormConnector = __webpack_require__(271);
+	var _createReduxFormConnector = __webpack_require__(272);
 
 	var _createReduxFormConnector2 = _interopRequireDefault(_createReduxFormConnector);
 
@@ -28736,22 +28870,22 @@
 	exports.default = createReduxForm;
 
 /***/ },
-/* 271 */
+/* 272 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	exports.__esModule = true;
 
-	var _noGetters = __webpack_require__(272);
+	var _noGetters = __webpack_require__(273);
 
 	var _noGetters2 = _interopRequireDefault(_noGetters);
 
-	var _getDisplayName = __webpack_require__(274);
+	var _getDisplayName = __webpack_require__(275);
 
 	var _getDisplayName2 = _interopRequireDefault(_getDisplayName);
 
-	var _createHigherOrderComponent = __webpack_require__(275);
+	var _createHigherOrderComponent = __webpack_require__(276);
 
 	var _createHigherOrderComponent2 = _interopRequireDefault(_createHigherOrderComponent);
 
@@ -28841,14 +28975,14 @@
 	exports.default = createReduxFormConnector;
 
 /***/ },
-/* 272 */
+/* 273 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = __webpack_require__(273);
+	module.exports = __webpack_require__(274);
 
 
 /***/ },
-/* 273 */
+/* 274 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -28943,7 +29077,7 @@
 	module.exports = exports['default'];
 
 /***/ },
-/* 274 */
+/* 275 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -28955,7 +29089,7 @@
 	}
 
 /***/ },
-/* 275 */
+/* 276 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -28964,57 +29098,57 @@
 
 	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-	var _actions = __webpack_require__(276);
+	var _actions = __webpack_require__(277);
 
 	var importedActions = _interopRequireWildcard(_actions);
 
-	var _getDisplayName = __webpack_require__(274);
+	var _getDisplayName = __webpack_require__(275);
 
 	var _getDisplayName2 = _interopRequireDefault(_getDisplayName);
 
-	var _reducer = __webpack_require__(259);
+	var _reducer = __webpack_require__(260);
 
 	var _deepEqual = __webpack_require__(192);
 
 	var _deepEqual2 = _interopRequireDefault(_deepEqual);
 
-	var _bindActionData = __webpack_require__(277);
+	var _bindActionData = __webpack_require__(278);
 
 	var _bindActionData2 = _interopRequireDefault(_bindActionData);
 
-	var _getValues = __webpack_require__(278);
+	var _getValues = __webpack_require__(279);
 
 	var _getValues2 = _interopRequireDefault(_getValues);
 
-	var _isValid = __webpack_require__(279);
+	var _isValid = __webpack_require__(280);
 
 	var _isValid2 = _interopRequireDefault(_isValid);
 
-	var _readFields = __webpack_require__(280);
+	var _readFields = __webpack_require__(281);
 
 	var _readFields2 = _interopRequireDefault(_readFields);
 
-	var _handleSubmit2 = __webpack_require__(294);
+	var _handleSubmit2 = __webpack_require__(295);
 
 	var _handleSubmit3 = _interopRequireDefault(_handleSubmit2);
 
-	var _asyncValidation = __webpack_require__(295);
+	var _asyncValidation = __webpack_require__(296);
 
 	var _asyncValidation2 = _interopRequireDefault(_asyncValidation);
 
-	var _silenceEvents = __webpack_require__(296);
+	var _silenceEvents = __webpack_require__(297);
 
 	var _silenceEvents2 = _interopRequireDefault(_silenceEvents);
 
-	var _silenceEvent = __webpack_require__(297);
+	var _silenceEvent = __webpack_require__(298);
 
 	var _silenceEvent2 = _interopRequireDefault(_silenceEvent);
 
-	var _wrapMapDispatchToProps = __webpack_require__(298);
+	var _wrapMapDispatchToProps = __webpack_require__(299);
 
 	var _wrapMapDispatchToProps2 = _interopRequireDefault(_wrapMapDispatchToProps);
 
-	var _wrapMapStateToProps = __webpack_require__(299);
+	var _wrapMapStateToProps = __webpack_require__(300);
 
 	var _wrapMapStateToProps2 = _interopRequireDefault(_wrapMapStateToProps);
 
@@ -29318,7 +29452,7 @@
 	exports.default = createHigherOrderComponent;
 
 /***/ },
-/* 276 */
+/* 277 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -29326,7 +29460,7 @@
 	exports.__esModule = true;
 	exports.untouch = exports.touch = exports.swapArrayValues = exports.submitFailed = exports.stopSubmit = exports.stopAsyncValidation = exports.startSubmit = exports.startAsyncValidation = exports.reset = exports.removeArrayValue = exports.initialize = exports.focus = exports.destroy = exports.change = exports.blur = exports.addArrayValue = undefined;
 
-	var _actionTypes = __webpack_require__(260);
+	var _actionTypes = __webpack_require__(261);
 
 	var addArrayValue = exports.addArrayValue = function addArrayValue(path, value, index, fields) {
 	  return { type: _actionTypes.ADD_ARRAY_VALUE, path: path, value: value, index: index, fields: fields };
@@ -29404,7 +29538,7 @@
 	};
 
 /***/ },
-/* 277 */
+/* 278 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -29415,7 +29549,7 @@
 
 	exports.default = bindActionData;
 
-	var _mapValues = __webpack_require__(261);
+	var _mapValues = __webpack_require__(262);
 
 	var _mapValues2 = _interopRequireDefault(_mapValues);
 
@@ -29439,7 +29573,7 @@
 	}
 
 /***/ },
-/* 278 */
+/* 279 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -29500,7 +29634,7 @@
 	exports.default = getValues;
 
 /***/ },
-/* 279 */
+/* 280 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -29522,7 +29656,7 @@
 	}
 
 /***/ },
-/* 280 */
+/* 281 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -29531,19 +29665,19 @@
 
 	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-	var _readField = __webpack_require__(281);
+	var _readField = __webpack_require__(282);
 
 	var _readField2 = _interopRequireDefault(_readField);
 
-	var _write = __webpack_require__(263);
+	var _write = __webpack_require__(264);
 
 	var _write2 = _interopRequireDefault(_write);
 
-	var _getValues = __webpack_require__(278);
+	var _getValues = __webpack_require__(279);
 
 	var _getValues2 = _interopRequireDefault(_getValues);
 
-	var _removeField = __webpack_require__(293);
+	var _removeField = __webpack_require__(294);
 
 	var _removeField2 = _interopRequireDefault(_removeField);
 
@@ -29593,7 +29727,7 @@
 	exports.default = readFields;
 
 /***/ },
-/* 281 */
+/* 282 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -29602,35 +29736,35 @@
 
 	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-	var _createOnBlur = __webpack_require__(282);
+	var _createOnBlur = __webpack_require__(283);
 
 	var _createOnBlur2 = _interopRequireDefault(_createOnBlur);
 
-	var _createOnChange = __webpack_require__(285);
+	var _createOnChange = __webpack_require__(286);
 
 	var _createOnChange2 = _interopRequireDefault(_createOnChange);
 
-	var _createOnDragStart = __webpack_require__(286);
+	var _createOnDragStart = __webpack_require__(287);
 
 	var _createOnDragStart2 = _interopRequireDefault(_createOnDragStart);
 
-	var _createOnDrop = __webpack_require__(287);
+	var _createOnDrop = __webpack_require__(288);
 
 	var _createOnDrop2 = _interopRequireDefault(_createOnDrop);
 
-	var _createOnFocus = __webpack_require__(288);
+	var _createOnFocus = __webpack_require__(289);
 
 	var _createOnFocus2 = _interopRequireDefault(_createOnFocus);
 
-	var _silencePromise = __webpack_require__(289);
+	var _silencePromise = __webpack_require__(290);
 
 	var _silencePromise2 = _interopRequireDefault(_silencePromise);
 
-	var _read = __webpack_require__(262);
+	var _read = __webpack_require__(263);
 
 	var _read2 = _interopRequireDefault(_read);
 
-	var _updateField = __webpack_require__(291);
+	var _updateField = __webpack_require__(292);
 
 	var _updateField2 = _interopRequireDefault(_updateField);
 
@@ -29805,14 +29939,14 @@
 	exports.default = readField;
 
 /***/ },
-/* 282 */
+/* 283 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	exports.__esModule = true;
 
-	var _getValue = __webpack_require__(283);
+	var _getValue = __webpack_require__(284);
 
 	var _getValue2 = _interopRequireDefault(_getValue);
 
@@ -29830,14 +29964,14 @@
 	exports.default = createOnBlur;
 
 /***/ },
-/* 283 */
+/* 284 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	exports.__esModule = true;
 
-	var _isEvent = __webpack_require__(284);
+	var _isEvent = __webpack_require__(285);
 
 	var _isEvent2 = _interopRequireDefault(_isEvent);
 
@@ -29890,7 +30024,7 @@
 	exports.default = getValue;
 
 /***/ },
-/* 284 */
+/* 285 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -29903,14 +30037,14 @@
 	exports.default = isEvent;
 
 /***/ },
-/* 285 */
+/* 286 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	exports.__esModule = true;
 
-	var _getValue = __webpack_require__(283);
+	var _getValue = __webpack_require__(284);
 
 	var _getValue2 = _interopRequireDefault(_getValue);
 
@@ -29924,7 +30058,7 @@
 	exports.default = createOnChange;
 
 /***/ },
-/* 286 */
+/* 287 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -29940,14 +30074,14 @@
 	exports.default = createOnDragStart;
 
 /***/ },
-/* 287 */
+/* 288 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	exports.__esModule = true;
 
-	var _createOnDragStart = __webpack_require__(286);
+	var _createOnDragStart = __webpack_require__(287);
 
 	var createOnDrop = function createOnDrop(name, change) {
 	  return function (event) {
@@ -29957,7 +30091,7 @@
 	exports.default = createOnDrop;
 
 /***/ },
-/* 288 */
+/* 289 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -29971,14 +30105,14 @@
 	exports.default = createOnFocus;
 
 /***/ },
-/* 289 */
+/* 290 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	exports.__esModule = true;
 
-	var _isPromise = __webpack_require__(290);
+	var _isPromise = __webpack_require__(291);
 
 	var _isPromise2 = _interopRequireDefault(_isPromise);
 
@@ -29995,7 +30129,7 @@
 	exports.default = silencePromise;
 
 /***/ },
-/* 290 */
+/* 291 */
 /***/ function(module, exports) {
 
 	module.exports = isPromise;
@@ -30006,7 +30140,7 @@
 
 
 /***/ },
-/* 291 */
+/* 292 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -30015,11 +30149,11 @@
 
 	var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
 
-	var _isPristine = __webpack_require__(292);
+	var _isPristine = __webpack_require__(293);
 
 	var _isPristine2 = _interopRequireDefault(_isPristine);
 
-	var _isValid = __webpack_require__(279);
+	var _isValid = __webpack_require__(280);
 
 	var _isValid2 = _interopRequireDefault(_isValid);
 
@@ -30078,7 +30212,7 @@
 	exports.default = updateField;
 
 /***/ },
-/* 292 */
+/* 293 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -30116,7 +30250,7 @@
 	}
 
 /***/ },
-/* 293 */
+/* 294 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -30196,18 +30330,18 @@
 	exports.default = removeField;
 
 /***/ },
-/* 294 */
+/* 295 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	exports.__esModule = true;
 
-	var _isPromise = __webpack_require__(290);
+	var _isPromise = __webpack_require__(291);
 
 	var _isPromise2 = _interopRequireDefault(_isPromise);
 
-	var _isValid = __webpack_require__(279);
+	var _isValid = __webpack_require__(280);
 
 	var _isValid2 = _interopRequireDefault(_isValid);
 
@@ -30260,18 +30394,18 @@
 	exports.default = handleSubmit;
 
 /***/ },
-/* 295 */
+/* 296 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	exports.__esModule = true;
 
-	var _isPromise = __webpack_require__(290);
+	var _isPromise = __webpack_require__(291);
 
 	var _isPromise2 = _interopRequireDefault(_isPromise);
 
-	var _isValid = __webpack_require__(279);
+	var _isValid = __webpack_require__(280);
 
 	var _isValid2 = _interopRequireDefault(_isValid);
 
@@ -30302,14 +30436,14 @@
 	exports.default = asyncValidation;
 
 /***/ },
-/* 296 */
+/* 297 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	exports.__esModule = true;
 
-	var _silenceEvent = __webpack_require__(297);
+	var _silenceEvent = __webpack_require__(298);
 
 	var _silenceEvent2 = _interopRequireDefault(_silenceEvent);
 
@@ -30328,14 +30462,14 @@
 	exports.default = silenceEvents;
 
 /***/ },
-/* 297 */
+/* 298 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	exports.__esModule = true;
 
-	var _isEvent = __webpack_require__(284);
+	var _isEvent = __webpack_require__(285);
 
 	var _isEvent2 = _interopRequireDefault(_isEvent);
 
@@ -30352,7 +30486,7 @@
 	exports.default = silenceEvent;
 
 /***/ },
-/* 298 */
+/* 299 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -30395,7 +30529,7 @@
 	exports.default = wrapMapDispatchToProps;
 
 /***/ },
-/* 299 */
+/* 300 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -30432,7 +30566,7 @@
 	exports.default = wrapMapStateToProps;
 
 /***/ },
-/* 300 */
+/* 301 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -30477,7 +30611,7 @@
 	exports.default = createPropTypes;
 
 /***/ },
-/* 301 */
+/* 302 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -30492,34 +30626,43 @@
 
 	var _reactRouter = __webpack_require__(181);
 
-	var _App = __webpack_require__(302);
+	var _App = __webpack_require__(303);
 
 	var _App2 = _interopRequireDefault(_App);
 
-	var _PostsIndex = __webpack_require__(303);
+	var _PostsIndex = __webpack_require__(304);
 
 	var _PostsIndex2 = _interopRequireDefault(_PostsIndex);
 
-	var _PostsNew = __webpack_require__(308);
+	var _PostsNew = __webpack_require__(309);
 
 	var _PostsNew2 = _interopRequireDefault(_PostsNew);
 
-	var _PostsShow = __webpack_require__(311);
+	var _PostsShow = __webpack_require__(312);
 
 	var _PostsShow2 = _interopRequireDefault(_PostsShow);
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+	// let prefix = location.pathname;
+	// let index = prefix;
+	// let postsNew = prefix + '/posts/new';
+	// let postsShow = prefix + '/posts/:id';
+
+	var index = '/';
+	var postsNew = '/posts/new';
+	var postsShow = '/posts/:id';
+
 	exports.default = _react2.default.createElement(
 	  _reactRouter.Route,
-	  { path: '/', component: _App2.default },
+	  { path: index, component: _App2.default },
 	  _react2.default.createElement(_reactRouter.IndexRoute, { component: _PostsIndex2.default }),
-	  _react2.default.createElement(_reactRouter.Route, { path: 'posts/new', component: _PostsNew2.default }),
-	  _react2.default.createElement(_reactRouter.Route, { path: 'posts/:id', component: _PostsShow2.default })
+	  _react2.default.createElement(_reactRouter.Route, { path: postsNew, component: _PostsNew2.default }),
+	  _react2.default.createElement(_reactRouter.Route, { path: postsShow, component: _PostsShow2.default })
 	);
 
 /***/ },
-/* 302 */
+/* 303 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -30568,7 +30711,7 @@
 	exports.default = App;
 
 /***/ },
-/* 303 */
+/* 304 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -30583,11 +30726,11 @@
 
 	var _react2 = _interopRequireDefault(_react);
 
-	var _HeaderContainer = __webpack_require__(304);
+	var _HeaderContainer = __webpack_require__(305);
 
 	var _HeaderContainer2 = _interopRequireDefault(_HeaderContainer);
 
-	var _PostsListContainer = __webpack_require__(306);
+	var _PostsListContainer = __webpack_require__(307);
 
 	var _PostsListContainer2 = _interopRequireDefault(_PostsListContainer);
 
@@ -30626,7 +30769,7 @@
 	exports.default = PostsIndex;
 
 /***/ },
-/* 304 */
+/* 305 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -30643,7 +30786,7 @@
 
 	var _index = __webpack_require__(239);
 
-	var _header = __webpack_require__(305);
+	var _header = __webpack_require__(306);
 
 	var _header2 = _interopRequireDefault(_header);
 
@@ -30671,7 +30814,7 @@
 	exports.default = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(_header2.default);
 
 /***/ },
-/* 305 */
+/* 306 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -30811,7 +30954,7 @@
 	exports.default = Header;
 
 /***/ },
-/* 306 */
+/* 307 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -30824,7 +30967,7 @@
 
 	var _index = __webpack_require__(239);
 
-	var _PostsList = __webpack_require__(307);
+	var _PostsList = __webpack_require__(308);
 
 	var _PostsList2 = _interopRequireDefault(_PostsList);
 
@@ -30854,7 +30997,7 @@
 	exports.default = PostsListContainer;
 
 /***/ },
-/* 307 */
+/* 308 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -30916,7 +31059,7 @@
 	          { className: 'list-group-item', key: post.Id },
 	          _react2.default.createElement(
 	            _reactRouter.Link,
-	            { style: { color: 'black' }, to: "posts/" + post.Id },
+	            { style: { color: 'black' }, to: '/posts/' + post.Id },
 	            _react2.default.createElement(
 	              'h3',
 	              { className: 'list-group-item-heading' },
@@ -30995,7 +31138,7 @@
 	exports.default = PostsList;
 
 /***/ },
-/* 308 */
+/* 309 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -31010,11 +31153,11 @@
 
 	var _react2 = _interopRequireDefault(_react);
 
-	var _HeaderContainer = __webpack_require__(304);
+	var _HeaderContainer = __webpack_require__(305);
 
 	var _HeaderContainer2 = _interopRequireDefault(_HeaderContainer);
 
-	var _PostFormContainer = __webpack_require__(309);
+	var _PostFormContainer = __webpack_require__(310);
 
 	var _PostFormContainer2 = _interopRequireDefault(_PostFormContainer);
 
@@ -31053,7 +31196,7 @@
 	exports.default = PostsNew;
 
 /***/ },
-/* 309 */
+/* 310 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -31062,13 +31205,13 @@
 	  value: true
 	});
 
-	var _PostsForm = __webpack_require__(310);
+	var _PostsForm = __webpack_require__(311);
 
 	var _PostsForm2 = _interopRequireDefault(_PostsForm);
 
 	var _index = __webpack_require__(239);
 
-	var _reduxForm = __webpack_require__(257);
+	var _reduxForm = __webpack_require__(258);
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -31076,14 +31219,14 @@
 	function validate(values) {
 	  var errors = {};
 
-	  if (!values.title || values.title.trim() === '') {
-	    errors.title = 'Enter a Title';
+	  if (!values.Name || values.Name.trim() === '') {
+	    errors.Name = 'Enter a Name';
 	  }
-	  if (!values.categories || values.categories.trim() === '') {
-	    errors.categories = 'Enter categories';
+	  if (!values.Categories__c || values.Categories__c.trim() === '') {
+	    errors.Categories__c = 'Enter Categories';
 	  }
-	  if (!values.content || values.content.trim() === '') {
-	    errors.content = 'Enter some content';
+	  if (!values.Content__c || values.Content__c.trim() === '') {
+	    errors.Content__c = 'Enter some Content';
 	  }
 
 	  return errors;
@@ -31097,7 +31240,7 @@
 	    dispatch((0, _index.validatePostFields)(values)).then(function (response) {
 	      var data = response.payload.data;
 	      //if status is not 200 or any one of the fields exist, then there is a field error
-	      if (response.payload.status != 200 || data.title || data.categories || data.description) {
+	      if (response.payload.status != 200 || data.Name || data.Categories__c || data.Content__c) {
 	        //let other components know of error by updating the redux` state
 	        dispatch((0, _index.validatePostFieldsFailure)(response.payload));
 	        reject(data); //this is for redux-form itself
@@ -31114,7 +31257,6 @@
 	var validateAndCreatePost = function validateAndCreatePost(values, dispatch) {
 
 	  return new Promise(function (resolve, reject) {
-
 	    dispatch((0, _index.createPost)(values)).then(function (response) {
 	      var data = response.payload.data;
 	      //if any one of these exist, then there is a field error
@@ -31150,14 +31292,14 @@
 	// reduxForm: 1st is form config, 2nd is mapStateToProps, 3rd is mapDispatchToProps
 	exports.default = (0, _reduxForm.reduxForm)({
 	  form: 'PostsNewForm',
-	  fields: ['title', 'categories', 'content'],
+	  fields: ['Name', 'Categories__c', 'Content__c'],
 	  asyncValidate: asyncValidate,
-	  asyncBlurFields: ['title'],
+	  asyncBlurFields: ['Name'],
 	  validate: validate
 	}, mapStateToProps, mapDispatchToProps)(_PostsForm2.default);
 
 /***/ },
-/* 310 */
+/* 311 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -31176,7 +31318,7 @@
 
 	var _reactRouter = __webpack_require__(181);
 
-	var _HeaderContainer = __webpack_require__(304);
+	var _HeaderContainer = __webpack_require__(305);
 
 	var _HeaderContainer2 = _interopRequireDefault(_HeaderContainer);
 
@@ -31217,9 +31359,9 @@
 	      var _props = this.props;
 	      var asyncValidating = _props.asyncValidating;
 	      var _props$fields = _props.fields;
-	      var title = _props$fields.title;
-	      var categories = _props$fields.categories;
-	      var content = _props$fields.content;
+	      var Name = _props$fields.Name;
+	      var Categories__c = _props$fields.Categories__c;
+	      var Content__c = _props$fields.Content__c;
 	      var handleSubmit = _props.handleSubmit;
 	      var submitting = _props.submitting;
 
@@ -31232,52 +31374,52 @@
 	          { onSubmit: handleSubmit(this.props.createPost.bind(this)) },
 	          _react2.default.createElement(
 	            'div',
-	            { className: 'form-group ' + (title.touched && title.invalid ? 'has-error' : '') },
+	            { className: 'form-group ' + (Name.touched && Name.invalid ? 'has-error' : '') },
 	            _react2.default.createElement(
 	              'label',
 	              { className: 'control-label' },
-	              'Title*'
+	              'Name*'
 	            ),
-	            _react2.default.createElement('input', _extends({ type: 'text', className: 'form-control' }, title)),
+	            _react2.default.createElement('input', _extends({ type: 'text', className: 'form-control' }, Name)),
 	            _react2.default.createElement(
 	              'div',
 	              { className: 'help-block' },
-	              title.touched ? title.error : ''
+	              Name.touched ? Name.error : ''
 	            ),
 	            _react2.default.createElement(
 	              'div',
 	              { className: 'help-block' },
-	              asyncValidating === 'title' ? 'validating..' : ''
+	              asyncValidating === 'Name' ? 'validating..' : ''
 	            )
 	          ),
 	          _react2.default.createElement(
 	            'div',
-	            { className: 'form-group ' + (categories.touched && categories.invalid ? 'has-error' : '') },
+	            { className: 'form-group ' + (Categories__c.touched && Categories__c.invalid ? 'has-error' : '') },
 	            _react2.default.createElement(
 	              'label',
 	              { className: 'control-label' },
 	              'Categories*'
 	            ),
-	            _react2.default.createElement('input', _extends({ type: 'text', className: 'form-control' }, categories)),
+	            _react2.default.createElement('input', _extends({ type: 'text', className: 'form-control' }, Categories__c)),
 	            _react2.default.createElement(
 	              'div',
 	              { className: 'help-block' },
-	              categories.touched ? categories.error : ''
+	              Categories__c.touched ? Categories__c.error : ''
 	            )
 	          ),
 	          _react2.default.createElement(
 	            'div',
-	            { className: 'form-group ' + (content.touched && content.invalid ? 'has-error' : '') },
+	            { className: 'form-group ' + (Content__c.touched && Content__c.invalid ? 'has-error' : '') },
 	            _react2.default.createElement(
 	              'label',
 	              { className: 'control-label' },
 	              'Content*'
 	            ),
-	            _react2.default.createElement('textarea', _extends({ className: 'form-control' }, content)),
+	            _react2.default.createElement('textarea', _extends({ className: 'form-control' }, Content__c)),
 	            _react2.default.createElement(
 	              'div',
 	              { className: 'help-block' },
-	              content.touched ? content.error : ''
+	              Content__c.touched ? Content__c.error : ''
 	            )
 	          ),
 	          _react2.default.createElement(
@@ -31303,7 +31445,7 @@
 	            _react2.default.createElement(
 	              'h3',
 	              null,
-	              'Check out Form Validations!'
+	              'This form has "Form Validations"!'
 	            )
 	          ),
 	          _react2.default.createElement(
@@ -31317,97 +31459,6 @@
 	                'a',
 	                { href: 'https://medium.com/@rajaraodv/adding-a-robust-form-validation-to-react-redux-apps-616ca240c124', target: '_blank' },
 	                'Adding A Robust Form Validation To React Redux Apps'
-	              )
-	            ),
-	            _react2.default.createElement(
-	              'ol',
-	              null,
-	              _react2.default.createElement(
-	                'li',
-	                null,
-	                _react2.default.createElement(
-	                  'h4',
-	                  null,
-	                  'Client Side Validation:'
-	                ),
-	                '1. Click on ',
-	                _react2.default.createElement(
-	                  'b',
-	                  null,
-	                  'Title'
-	                ),
-	                ' field and leave it empty.',
-	                _react2.default.createElement('br', null),
-	                '2. Then click on another field(to trigger blur).',
-	                _react2.default.createElement('br', null),
-	                ' ',
-	                _react2.default.createElement(
-	                  'b',
-	                  null,
-	                  'Result: "Enter a Title"'
-	                ),
-	                _react2.default.createElement('br', null)
-	              ),
-	              _react2.default.createElement(
-	                'li',
-	                null,
-	                _react2.default.createElement(
-	                  'h4',
-	                  null,
-	                  '"Instant" Server Side Validation:'
-	                ),
-	                'Calls server w/ field values when a field is blurred (even before submitting the form).',
-	                _react2.default.createElement('br', null),
-	                '1. Create a post',
-	                _react2.default.createElement('br', null),
-	                '2. Try to create another w/ the same ',
-	                _react2.default.createElement(
-	                  'b',
-	                  null,
-	                  'Title'
-	                ),
-	                _react2.default.createElement('br', null),
-	                '3. Then click on Categories field (to trigger blur).',
-	                _react2.default.createElement('br', null),
-	                ' ',
-	                _react2.default.createElement(
-	                  'b',
-	                  null,
-	                  'Result: You\'ll get error from the server saying "Title is not unique"'
-	                )
-	              ),
-	              _react2.default.createElement(
-	                'li',
-	                null,
-	                _react2.default.createElement(
-	                  'h4',
-	                  null,
-	                  '"onSubmit" Server Side Validation:'
-	                ),
-	                'This is the common scenario where the server throws some error when user clicks on submit button.',
-	                _react2.default.createElement('br', null),
-	                '1. Enter ',
-	                _react2.default.createElement(
-	                  'b',
-	                  null,
-	                  'test'
-	                ),
-	                ' in all the above fields .',
-	                _react2.default.createElement('br', null),
-	                '2. Press the Submit button.',
-	                _react2.default.createElement('br', null),
-	                ' ',
-	                _react2.default.createElement(
-	                  'b',
-	                  null,
-	                  'Result: Errors below every field'
-	                ),
-	                _react2.default.createElement('br', null),
-	                _react2.default.createElement(
-	                  'i',
-	                  null,
-	                  'Note: The server is hardcoded to return this error for demo purposes'
-	                )
 	              )
 	            )
 	          )
@@ -31425,7 +31476,7 @@
 	exports.default = PostsForm;
 
 /***/ },
-/* 311 */
+/* 312 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -31446,11 +31497,11 @@
 
 	var _reactRouter = __webpack_require__(181);
 
-	var _HeaderContainer = __webpack_require__(304);
+	var _HeaderContainer = __webpack_require__(305);
 
 	var _HeaderContainer2 = _interopRequireDefault(_HeaderContainer);
 
-	var _PostDetailsContainer = __webpack_require__(312);
+	var _PostDetailsContainer = __webpack_require__(313);
 
 	var _PostDetailsContainer2 = _interopRequireDefault(_PostDetailsContainer);
 
@@ -31501,7 +31552,7 @@
 	exports.default = PostsShow;
 
 /***/ },
-/* 312 */
+/* 313 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -31510,7 +31561,7 @@
 	  value: true
 	});
 
-	var _PostDetails = __webpack_require__(313);
+	var _PostDetails = __webpack_require__(314);
 
 	var _PostDetails2 = _interopRequireDefault(_PostDetails);
 
@@ -31540,7 +31591,7 @@
 	exports.default = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(_PostDetails2.default);
 
 /***/ },
-/* 313 */
+/* 314 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -31617,18 +31668,18 @@
 	        _react2.default.createElement(
 	          'h3',
 	          null,
-	          post.title
+	          post.Name
 	        ),
 	        _react2.default.createElement(
 	          'h6',
 	          null,
 	          'Categories: ',
-	          post.categories
+	          post.Categories__c
 	        ),
 	        _react2.default.createElement(
 	          'p',
 	          null,
-	          post.content
+	          post.Content__c
 	        )
 	      );
 	    }
@@ -31643,7 +31694,7 @@
 	exports.default = PostDetails;
 
 /***/ },
-/* 314 */
+/* 315 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -31654,7 +31705,7 @@
 
 	exports['default'] = promiseMiddleware;
 
-	var _fluxStandardAction = __webpack_require__(315);
+	var _fluxStandardAction = __webpack_require__(316);
 
 	function isPromise(val) {
 	  return val && typeof val.then === 'function';
@@ -31681,7 +31732,7 @@
 	module.exports = exports['default'];
 
 /***/ },
-/* 315 */
+/* 316 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -31692,7 +31743,7 @@
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-	var _lodashIsplainobject = __webpack_require__(316);
+	var _lodashIsplainobject = __webpack_require__(317);
 
 	var _lodashIsplainobject2 = _interopRequireDefault(_lodashIsplainobject);
 
@@ -31711,7 +31762,7 @@
 	}
 
 /***/ },
-/* 316 */
+/* 317 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -31722,9 +31773,9 @@
 	 * Copyright 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
 	 * Available under MIT license <https://lodash.com/license>
 	 */
-	var baseFor = __webpack_require__(317),
-	    isArguments = __webpack_require__(318),
-	    keysIn = __webpack_require__(319);
+	var baseFor = __webpack_require__(318),
+	    isArguments = __webpack_require__(319),
+	    keysIn = __webpack_require__(320);
 
 	/** `Object#toString` result references. */
 	var objectTag = '[object Object]';
@@ -31820,7 +31871,7 @@
 
 
 /***/ },
-/* 317 */
+/* 318 */
 /***/ function(module, exports) {
 
 	/**
@@ -31874,7 +31925,7 @@
 
 
 /***/ },
-/* 318 */
+/* 319 */
 /***/ function(module, exports) {
 
 	/**
@@ -32123,7 +32174,7 @@
 
 
 /***/ },
-/* 319 */
+/* 320 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -32134,8 +32185,8 @@
 	 * Copyright 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
 	 * Available under MIT license <https://lodash.com/license>
 	 */
-	var isArguments = __webpack_require__(318),
-	    isArray = __webpack_require__(320);
+	var isArguments = __webpack_require__(319),
+	    isArray = __webpack_require__(321);
 
 	/** Used to detect unsigned integer values. */
 	var reIsUint = /^\d+$/;
@@ -32261,7 +32312,7 @@
 
 
 /***/ },
-/* 320 */
+/* 321 */
 /***/ function(module, exports) {
 
 	/**

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import {getPosts, getPost, createNewPost, validateFields, deleteSinglePost} from '../api/index';
 
 //Post list
 export const FETCH_POSTS = 'FETCH_POSTS';
@@ -33,11 +34,9 @@ export const RESET_DELETED_POST = 'RESET_DELETED_POST';
 
 const ROOT_URL = location.href.indexOf('localhost') > 0 ? 'http://localhost:3000/api' : '/api';
 export function fetchPosts() {
-  const request = axios.get(`${ROOT_URL}/posts?query=SELECT Id, Name,Categories__c FROM Post__c`);
-
   return {
     type: FETCH_POSTS,
-    payload: request
+    payload: getPosts()
   };
 }
 
@@ -56,11 +55,9 @@ export function fetchPostsFailure(error) {
 }
 
 export function validatePostFields(props) {
-  const request = axios.post(`${ROOT_URL}/validatePostFields`, props);
-
   return {
     type: VALIDATE_POST_FIELDS,
-    payload: request
+    payload: validateFields(props)
   };
 }
 
@@ -85,11 +82,10 @@ export function resetPostFields() {
 
 
 export function createPost(props) {
-  const request = axios.post(`${ROOT_URL}/posts`, props);
 
   return {
     type: CREATE_POST,
-    payload: request
+    payload: createNewPost(props)
   };
 }
 
@@ -120,11 +116,9 @@ export function resetDeletedPost() {
 };
 
 export function fetchPost(id) {
-  const request = axios.get(`${ROOT_URL}/posts/${id}`);
-
   return {
     type: FETCH_POST,
-    payload: request
+    payload: getPost(id)
   };
 }
 
@@ -150,11 +144,10 @@ export function resetActivePost() {
 };
 
 export function deletePost(id) {
-  const request = axios.delete(`${ROOT_URL}/posts/${id}`);
 
   return {
     type: DELETE_POST,
-    payload: request
+    payload: deleteSinglePost(id)
   };
 }
 

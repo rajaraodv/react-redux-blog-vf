@@ -34,9 +34,9 @@ class PostDetails extends Component {
 
     return (
       <div>
-        <h3>{post.title}</h3>
-        <h6>Categories: {post.categories}</h6>
-        <p>{post.content}</p>
+        <h3>{post.Name}</h3>
+        <h6>Categories: {post.Categories__c}</h6>
+        <p>{post.Content__c}</p>
       </div>
     );
   }

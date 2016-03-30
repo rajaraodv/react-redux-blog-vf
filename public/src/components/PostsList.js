@@ -19,7 +19,7 @@ class PostsList extends Component {
     return posts.map((post) => {
       return (
         <li className="list-group-item" key={post.Id}>
-          <Link style={{color:'black'}} to={"posts/" + post.Id}>
+          <Link style={{color:'black'}} to={'/posts/' + post.Id}>
             <h3 className="list-group-item-heading">{post.Name}</h3>
           </Link>
             {this.renderCategories(post.Categories__c ? post.Categories__c.split(',') : [])}
