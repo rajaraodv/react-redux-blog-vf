@@ -1,16 +1,16 @@
 # React Redux CRUD App In Visualforce
 
-#Unmanaged Package
+## Unmanaged Package
 1. Install the unmanaged package: <a href="https://login.salesforce.com/packaging/installPackage.apexp?p0=04ti0000000YACJ" target="_blank">https://login.salesforce.com/packaging/installPackage.apexp?p0=04ti0000000YACJ</a>
 2. Go to: `/apex/reactreduxblog` to see the app.
 
-#Local Installation
+## Local Installation
 1. Install <a href="https://nodejs.org" target="_blank">Node.js</a> 
 2. `git clone https://github.com/rajaraodv/react-redux-blog-vf.git`
 3. `cd react-redux-blog-vf`
 4. `npm install`
 
-#Install ngrok for localhost tunneling
+## Install ngrok for localhost tunneling
 Install <a href="https://ngrok.com" target="_blank">ngrok</a>. It provides a way to serve/expose your localhost files to the internet even in **https (required by Visualforce)**.  
 
 **This is great for VF development**. Because now, you can develop React Redux (or angular or whatever) locally and directly load the JS from within Visualforce while you are still developing it! So you won't have to  upload the JS to Static Resource everytime you make changes to the code!
@@ -22,14 +22,14 @@ Instead of point to static resource, you can point to something that looks like 
 
 **Note: Once you are all done, simply copy the final bundle.js from 'public' folder in your localhost (see production section) to static resource and update the url above to point to static resource.**
 
-#Custom Object
+## Custom Object
 Create a custom object "Post" with following three fields: 
 
 1. "Name" (This is the default/standard text field), 
 2. "Categories" (text) 
 3. "Content" (textarea)
 
-#Development: Local + Visualforce
+## Development: Local + Visualforce
 *You need two terminal windows open*, one for client and the other for ngrok.
 
 1. In terminal 1, run: `npm run dev`. This runs the development server(webpack-dev-server) at port 8080.
@@ -65,20 +65,20 @@ Create a custom object "Post" with following three fields:
 ```
 
 
-#Production (Visualforce)
+## Production (Visualforce)
 
 1. Generate the latest React app by running: `npm run build`
 2. This file will be created in the `public` folder
 3. Upload the file to static resource
-4. Change the URL in your Visualforce to point to the `bundle.js` in Static resource.
+4. Change the URL in your Visualforce to point to the `bundle.js` in Static Resources.
 
 
-#Learn More
+## Learn More
 1. <a href="https://developer.salesforce.com/docs/atlas.en-us.pages.meta/pages/pages_remote_objects.htm" target="_blank">Visualforce Remote Objects</a>
 2. <a href="https://jsforce.github.io" target="_blank">jsforce (nodejs lib)</a>
 
 
-#React Redux Blogs
+## React Redux Blogs
 Please check out the following blogs to learn more:
 
 1. <a href="https://medium.com/@rajaraodv/a-guide-for-building-a-react-redux-crud-app-7fe0b8943d0f#.kjkfygy88" target="_blank">A Guide For Building A React Redux CRUD App</a>
